@@ -2,10 +2,20 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.Python
+env/
+.venv/
+.idea/
+.vscode/
 *.DS_Store
+
+# Data / models / outputs
 *.zip
 *.pt
 data/raw/
 data/processed/
 models/
 outputs/
+
+# Notebooks generated
+*.ipynb_checkpoints/

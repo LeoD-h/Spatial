@@ -3,9 +3,6 @@ import zipfile
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-import pandas as pd
-from sklearn.model_selection import train_test_split
-
 # Class mapping reused across training and inference
 CLASS_NAMES: Dict[int, str] = {
     0: "elliptique",
@@ -15,7 +12,7 @@ CLASS_NAMES: Dict[int, str] = {
 }
 
 
-def _assign_class(row: pd.Series) -> int:
+def _assign_class(row) -> int:
     """
     Reproduces the heuristic from the original notebook to build a single label
     from Galaxy Zoo probabilities.
@@ -72,6 +69,9 @@ def prepare_dataset(
         dataset_yaml: Path to the generated dataset.yaml.
         output_dir: The directory containing train/ and val/ folders.
     """
+    import pandas as pd
+    from sklearn.model_selection import train_test_split
+
     images_root = _extract_images(zip_path, output_dir.parent / "galaxy_data")
     df = pd.read_csv(labels_csv)
 

@@ -8,7 +8,7 @@ Scripts Python inspirés du notebook `Spatial_Test.ipynb` pour préparer le data
   - `train.py` : préparation dataset + entraînement YOLO (CUDA/NVIDIA par défaut).
   - `run_inference.py` : inférences (image locale, URL ou batch avec stats).
   - `gui.py` : interface Tk.
-  - `run.py` : point d’entrée unique pour lancer l’interface graphique.
+- `run.py` : point d’entrée unique pour lancer l’interface graphique (racine).
 - `spatial/` : utilitaires (préparation dataset, prédiction, stats).
 - `TestNotebook/` : notebooks d’origine.
 - `data/raw/` : données brutes (zip + csv).
@@ -68,7 +68,7 @@ Les images annotées sont sauvegardées dans `outputs/predictions`.
 ## Interface graphique
 
 ```bash
-python app/run.py
+python run.py
 ```
 
 Fonctionnalités dans la fenêtre :

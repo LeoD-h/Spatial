@@ -21,7 +21,7 @@ def predict_image(
     model,
     source: Path,
     save_dir: Path,
-    conf: float = 0.25,
+    conf: float = 0.10,
     iou: float = 0.45,
 ) -> Tuple[Path, List[Dict]]:
     """

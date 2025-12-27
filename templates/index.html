@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌌 Spatial - Galaxy Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Spatial Galaxy Detector</h1>
+            <p class="subtitle">Détection automatique de galaxies avec intelligence artificielle</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Options d'upload -->
+            <div class="upload-section">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('upload')">Upload Image</button>
+                    <button class="tab" onclick="switchTab('url')">URL Image</button>
+                    <button class="tab" onclick="switchTab('random')">Image Test Aléatoire</button>
+                </div>
+
+                <!-- Tab Upload -->
+                <div id="upload-tab" class="tab-content active">
+                    <div class="upload-zone" id="dropZone">
+                        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                        <div class="upload-icon">IMAGE</div>
+                        <p>Glissez une image ici ou cliquez pour sélectionner</p>
+                        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                            Choisir une image
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab URL -->
+                <div id="url-tab" class="tab-content">
+                    <div class="url-input-container">
+                        <input type="text" id="urlInput" placeholder="https://example.com/galaxy.jpg" class="url-input">
+                        <button class="btn btn-primary" onclick="predictFromUrl()">Analyser URL</button>
+                    </div>
+                </div>
+
+                <!-- Tab Random -->
+                <div id="random-tab" class="tab-content">
+                    <div class="random-container">
+                        <p>Testez le modèle sur une image aléatoire du dataset de validation</p>
+                        <button class="btn btn-success" onclick="predictRandom()">
+                            Image Aléatoire
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Résultats -->
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analyse en cours...</p>
+                </div>
+
+                <div id="resultsContent" style="display: none;">
+                    <div class="results-header">
+                        <h2>Résultats de l'analyse</h2>
+                        <span class="detection-count" id="detectionCount">0 détection</span>
+                    </div>
+
+                    <div id="groundTruthSection" style="display: none; margin-bottom: 20px;">
+                        <div class="ground-truth-box">
+                            <h3>Type réel de la galaxie</h3>
+                            <p class="true-class" id="trueClass"></p>
+                        </div>
+                    </div>
+
+                    <div class="image-result">
+                        <img id="resultImage" src="" alt="Résultat">
+                    </div>
+
+                    <div class="detections-list" id="detectionsList">
+                        <!-- Les détections seront ajoutées ici -->
+                    </div>
+
+                    <button class="btn btn-secondary" onclick="resetAnalysis()">
+                        Nouvelle analyse
+                    </button>
+                </div>
+
+                <div id="errorContent" style="display: none;">
+                    <div class="error-message">
+                        <span class="error-icon">!</span>
+                        <p id="errorText"></p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="resetAnalysis()">
+                        Réessayer
+                    </button>
+                </div>
+            </div>
+
+            <!-- Info Classes -->
+            <div class="info-section">
+                <h3>Classes détectables</h3>
+                <div class="class-tags">
+                    {% for class_id, class_name in class_names.items() %}
+                    <span class="class-tag">{{ class_name }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Spatial Galaxy Detector - Powered by YOLOv8</p>
+        </footer>
+    </div>
+
+    <script>
+        // Gestion des tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+
+        // Drag & Drop
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // Traitement du fichier
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('Veuillez sélectionner une image valide');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            showLoading();
+            
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showResults(data);
+                } else {
+                    showError(data.error || 'Erreur lors de l\'analyse');
+                }
+            })
+            .catch(error => {
+                showError('Erreur de connexion: ' + error.message);
+            });
+        }
+
+        // Prédiction depuis URL
+        function predictFromUrl() {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) {
+                showError('Veuillez entrer une URL');
+                return;
+            }
+
+            showLoading();
+
+            fetch('/predict_url', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url: url })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showResults(data);
+                } else {
+                    showError(data.error || 'Erreur lors de l\'analyse');
+                }
+            })
+            .catch(error => {
+                showError('Erreur de connexion: ' + error.message);
+            });
+        }
+
+        // Image aléatoire
+        function predictRandom() {
+            showLoading();
+
+            fetch('/random_test', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showResults(data);
+                } else {
+                    showError(data.error || 'Erreur lors de l\'analyse');
+                }
+            })
+            .catch(error => {
+                showError('Erreur de connexion: ' + error.message);
+            });
+        }
+
+        // Affichage
+        function showLoading() {
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('resultsContent').style.display = 'none';
+            document.getElementById('errorContent').style.display = 'none';
+        }
+
+        function showResults(data) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('resultsContent').style.display = 'block';
+            document.getElementById('resultImage').src = 'data:image/jpeg;base64,' + data.image;
+            
+            // Afficher le vrai type si disponible (image aléatoire)
+            if (data.true_class) {
+                document.getElementById('groundTruthSection').style.display = 'block';
+                document.getElementById('trueClass').textContent = data.true_class;
+            } else {
+                document.getElementById('groundTruthSection').style.display = 'none';
+            }
+            
+            const count = data.count || 0;
+            document.getElementById('detectionCount').textContent = 
+                count === 0 ? 'Aucune détection' : 
+                count === 1 ? '1 détection' : 
+                `${count} détections`;
+
+            const detectionsList = document.getElementById('detectionsList');
+            detectionsList.innerHTML = '';
+            
+            if (data.detections && data.detections.length > 0) {
+                data.detections.forEach((det, index) => {
+                    const detDiv = document.createElement('div');
+                    detDiv.className = 'detection-item';
+                    detDiv.innerHTML = `
+                        <span class="detection-number">#${index + 1}</span>
+                        <span class="detection-class">${det.class}</span>
+                        <span class="detection-confidence">${det.confidence}</span>
+                    `;
+                    detectionsList.appendChild(detDiv);
+                });
+            } else {
+                detectionsList.innerHTML = '<p class="no-detection">Aucune galaxie détectée dans cette image</p>';
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('errorContent').style.display = 'block';
+            document.getElementById('errorText').textContent = message;
+        }
+
+        function resetAnalysis() {
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('urlInput').value = '';
+            document.getElementById('groundTruthSection').style.display = 'none';
+            // Réinitialiser correctement le file input
+            const fileInput = document.getElementById('fileInput');
+            fileInput.value = '';
+            // Forcer le reset en créant un nouveau input
+            const newInput = fileInput.cloneNode(true);
+            fileInput.parentNode.replaceChild(newInput, fileInput);
+            // Réattacher l'event listener
+            newInput.addEventListener('change', handleFileSelect);
+        }
+    </script>
+</body>
+</html>
