@@ -1,9 +1,15 @@
 import argparse
 import random
 import threading
+import sys
 from pathlib import Path
 from tkinter import BOTH, LEFT, RIGHT, TOP, BOTTOM, Button, Entry, Frame, Label, StringVar, Tk, filedialog
 from tkinter import ttk
+
+# Ensure project root is on sys.path when executed from app/
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from PIL import Image, ImageTk
 
