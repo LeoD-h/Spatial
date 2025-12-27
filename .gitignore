@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.DS_Store
+*.zip
+*.pt
+data/raw/
+data/processed/
+models/
+outputs/
